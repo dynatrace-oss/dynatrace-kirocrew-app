@@ -1,117 +1,61 @@
-# Repository Template
+# Dynatrace — KiroCrew app
 
-This template is the starting point for new repositories in the `dynatrace-oss` organization.
+A Kanban control tower for Dynatrace. Triage **problems** (default view) across
+lifecycle lanes — New, Ongoing, Under maintenance, Recently closed — and see
+**services** and **applications** grouped by health (Unhealthy, Watch, Healthy),
+derived by correlating active problems with affected entities.
 
-Creating a repository in `dynatrace-oss` establishes an ongoing ownership, maintenance, and lifecycle commitment. Before a repository is published or actively used, the owning team must confirm that the repository has clear ownership, appropriate documentation, and the minimum required governance and automation in place.
+The app is **read-only**: it never closes problems or changes any Dynatrace
+state. Anything that acts links out to Dynatrace or hands a composed prompt to
+a KiroCrew agent.
 
-## Purpose
+## Demo
 
-Use this template when creating a new repository that will live in `dynatrace-oss`.
+▶️ [docs/demo.mp4](docs/demo.mp4) — the board running against a live tenant,
+with agent-ranked problems, health-grouped services, and the detail drawer.
 
-This template provides a baseline structure for:
-- repository documentation
-- contribution guidance
-- community health files
-- basic automation
-- ownership and maintenance expectations
+## Smart ranking
 
-## Required actions after repository creation
+The default sort is **Smart**: a KiroCrew agent (the `dynatrace-smart-rank`
+cron, every 15 minutes) ranks the active problem cards by triage urgency using
+category weight, blast radius, root-cause presence, age, recurrence, and what
+it knows about your environment from memory. Each card shows its rank and a
+one-line rationale on hover. Deterministic sorts (Severity, Newest, Most
+affected, Longest running) are always available; when no fresh ranking exists
+the UI falls back to Severity and shows "Smart ranking pending".
 
-After creating a repository from this template, the owning team must complete the following before the repository is considered ready for active use or publication:
+## Requirements
 
-### 1. Replace placeholder content
-Update this README to describe:
-- what the repository contains
-- who it is for
-- how it should be used
-- how contributors can get started
-- any important limitations, prerequisites, or support boundaries
+- [dtctl](https://github.com/dynatrace-oss/dtctl) on PATH (or `DTCTL_BIN`).
+- Credentials, resolved in this order:
+  1. `DT_ACCESS_TOKEN` (+ `DT_ENVIRONMENT_URL`) environment variables
+  2. An existing dtctl context (`dtctl auth login` — OAuth in the OS keyring)
+  3. A token pasted in the app's **Settings** overlay, stored owner-only
+     (`0600`) under the app data directory; never logged or echoed back
+     (status shows only source + last 4 characters)
 
-### 2. Confirm repository ownership
-Each repository must have:
-- a primary maintainer, DRI, or owning team
-- a documented support model
-- a `CODEOWNERS` file that reflects the responsible team or maintainers
+If nothing resolves, the app runs on a built-in **demo dataset** — every
+response is labelled `demo: true` and the UI shows an amber banner.
 
-Ownership must remain current over time. Repositories without durable ownership may be subject to review, restriction, or archival.
+## Install
 
-### 3. Review inherited community health files
-Some community health files may be inherited from organization defaults. The owning team is responsible for reviewing them and deciding whether repository-specific versions are needed.
+```
+cd ui && npm install && npm run build && cd ..
+kirocrew app install "$PWD"
+kirocrew app enable dynatrace
+kirocrew restart
+```
 
-At minimum, review:
-- `CONTRIBUTING.md`
-- `CODE_OF_CONDUCT.md`
-- `SECURITY.md`
-- `SUPPORT.md`
+For UI hot-reload while developing: `kirocrew app dev dynatrace`.
 
-If the repository has different contribution, security, or support expectations than the organization defaults, add repository-specific versions.
+## Layout
 
-### 4. Confirm licensing
-Each repository must include the correct license for its contents. Do not assume the default is always appropriate. Confirm the intended license before publishing. More information on licensing can be found [here](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/licensing-a-repository).
+Header (environment link, demo badge) → toolbar (view switcher, sort, time
+window, search, refresh, settings) → Kanban columns → detail drawer with the
+full problem record, a deep link into the Dynatrace Problems app, and agent
+handoff actions (*Investigate*, *Summarize for standup*).
 
-### 5. Add or validate baseline automation
-At minimum, the repository should include automation appropriate to its contents. This usually includes:
-- Markdown linting
-- validation for configuration files where applicable
-- dependency update automation
-- any language-specific test or lint workflows needed for the project
+## Docs
 
-### 6. Validate publication readiness
-Before making a repository public, confirm that:
-- the repository has a clear purpose
-- ownership is defined
-- required documentation is present
-- the support model is clear
-- secrets are not present
-- branch protection and review expectations are in place where needed
-
-## Publication and support expectations
-
-Repositories in `dynatrace-oss` are not automatically considered commercially supported products.
-
-Unless explicitly stated otherwise, maintainers should make support expectations clear in the repository documentation. If a project is community-supported, experimental, internal-only, or provided without official product support, that should be stated plainly in the README and/or `SUPPORT.md`.
-
-Example language:
-
-> This project is open source and maintained by Dynatrace contributors. It is not covered by standard Dynatrace commercial support unless explicitly stated otherwise.
-
-## Minimum recommended repository contents
-
-The following should usually be present in each repository:
-
-- `README.md`
-- `LICENSE`
-- `CODEOWNERS`
-- `CONTRIBUTING.md` or inherited equivalent
-- `SECURITY.md` or inherited equivalent
-- `SUPPORT.md` or inherited equivalent
-- `AGENTS.md` or inherited equivalent 
-- issue templates
-- pull request template
-- baseline CI workflows
-
-## Repository lifecycle
-
-Creating a repository is the beginning of a lifecycle, not a one-time setup step. Repository owners are expected to maintain the repository over time, including:
-- keeping ownership information current
-- reviewing dependency and automation health
-- responding to contribution and support signals as appropriate
-- archiving or transferring the repository when it is no longer actively maintained or no longer belongs in the organization
-
-## AI assistant guidance
-
-This repository includes repository-level guidance for AI coding assistants:
-
-- `AGENTS.md` provides repository expectations and review guidance for agent-based coding tools
-- `.github/copilot-instructions.md` provides repository-wide instructions for GitHub Copilot
-
-## Repository Exemplars
-
-Looking for some inspiration? Here are a few Dynatrace Open Source repo examples:
-- (https://github.com/dynatrace-oss/dynatrace-managed-mcp)
-- (https://github.com/dynatrace-oss/hash4j)
-- (https://github.com/dynatrace-oss/kimera)
-
-## Questions
-
-For questions about repository setup, lifecycle expectations, or placement in `dynatrace-oss`, contact the [Open Source Program](https://dynatrace.sharepoint.com/sites/DevRel/SitePages/Open-Source-Program-Office.aspx).
+- `DESIGN.md` — the design contract (views, sorting, routes, architecture)
+- `skills/dynatrace-problems/` — agent guide (board API, ranking, digest recipe)
