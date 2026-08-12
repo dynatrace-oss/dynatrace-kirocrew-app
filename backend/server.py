@@ -360,7 +360,13 @@ async def _resolve_credential_uncached() -> Cred:
     try:
         who = await dtctl.whoami(context=ctx)
         return Cred(True, "dtctl", "", who.get("environment", ""), token=None, context=ctx)
-    except DtctlError:
+    except DtctlError as e:
+        # config_error means the dtctl config file is missing entirely — this is
+        # a definitive "not configured" signal, not a transient failure. Clear
+        # the last-good-cred cache so we don't show a stale "configured" state.
+        if e.code == "config_error" or "config file not found" in (e.message or "").lower():
+            global _last_good_cred
+            _last_good_cred = None
         pass
 
     # 3. Pasted token file

@@ -8,6 +8,7 @@ import type { Selection } from './components/Board'
 import { Drawer } from './components/Drawer'
 import { SettingsOverlay } from './components/SettingsOverlay'
 import { EmptyState } from './components/EmptyState'
+import { LandingPage } from './components/LandingPage'
 import { useBoard } from './useBoard'
 import { isProblemView, isSmartFresh, matchesSearch, normalizeColumns } from './api'
 import type { SortKey, ViewKey, WindowKey } from './api'
@@ -21,11 +22,17 @@ export default function Dynatrace() {
   const [selection, setSelection] = useState<Selection | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
 
+  // Dev/test preview flag: ?preview=landing or ?preview=reauth forces those states
+  // regardless of credential status. Remove the param to return to normal.
+  const previewParam = new URLSearchParams(window.location.search).get('preview')
+  const previewLanding = previewParam === 'landing'
+  const previewReauth = previewParam === 'reauth'
+
   const { status, board, loading, error, refresh, reloadStatus } = useBoard(view, win)
 
   const demo = board?.demo ?? status?.demo ?? false
   // A loaded board always wins over a transient "not configured" status probe.
-  const hasAccess = Boolean(status?.configured) || demo || Boolean(board)
+  const hasAccess = (Boolean(status?.configured) || demo || Boolean(board)) && !previewLanding && !previewReauth
   const rank = board?.smart_rank
   const smartFresh = isProblemView(view) && isSmartFresh(rank)
 
@@ -93,20 +100,14 @@ export default function Dynatrace() {
       )}
 
       {/* Body */}
-      {!hasAccess && status ? (
-        <EmptyState
-          icon="settings"
-          title="Connect Dynatrace"
-          body="No Dynatrace credentials are configured. Add an access token in Settings to load your tenant."
-          action={{ label: 'Open Settings', onClick: () => setSettingsOpen(true) }}
-        />
+      {previewLanding ? (
+        <LandingPage onConnected={() => void reloadStatus()} />
+      ) : previewReauth ? (
+        <LandingPage reauth onConnected={() => void reloadStatus()} />
+      ) : !hasAccess && status ? (
+        <LandingPage onConnected={() => void reloadStatus()} />
       ) : error && !board && (error.code === 'auth_expired' || /sign-in|invalid_grant|invalidated/i.test((error.message || '') + (error.hint || ''))) ? (
-        <EmptyState
-          icon="warning"
-          title="Dynatrace sign-in expired"
-          body="Your sign-in was invalidated and needs a quick renewal — open Settings and click 'Sign in with Dynatrace' to reconnect in the browser."
-          action={{ label: 'Open Settings', onClick: () => setSettingsOpen(true) }}
-        />
+        <LandingPage reauth onConnected={() => void reloadStatus()} />
       ) : error && !board ? (
         <EmptyState
           icon="warning"
