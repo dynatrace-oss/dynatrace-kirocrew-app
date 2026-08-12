@@ -1,0 +1,17 @@
+name: Markdown lint
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  markdownlint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Run markdown lint
+        run: echo "Replace with markdown lint command"
