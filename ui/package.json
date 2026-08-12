@@ -1,0 +1,33 @@
+{
+  "name": "dynatrace-ui",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit && vite build"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.79",
+    "@types/react-dom": "^18.2.25",
+    "@vitejs/plugin-react": "^4.2.0",
+    "typescript": "^5.4.5",
+    "vite": "^6.4.3"
+  },
+  "peerDependencies": {
+    "@kirocrew/app-sdk": "*",
+    "lucide-react": "*"
+  },
+  "peerDependenciesMeta": {
+    "@kirocrew/app-sdk": {
+      "optional": true
+    },
+    "lucide-react": {
+      "optional": true
+    }
+  }
+}
