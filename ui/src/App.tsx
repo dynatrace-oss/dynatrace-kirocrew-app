@@ -21,6 +21,8 @@ export default function Dynatrace() {
   const [search, setSearch] = useState('')
   const [selection, setSelection] = useState<Selection | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  // Lets an unconfigured user opt into the demo board from the landing page.
+  const [exploreDemo, setExploreDemo] = useState(false)
 
   // Dev/test preview flag: ?preview=landing or ?preview=reauth forces those states
   // regardless of credential status. Remove the param to return to normal.
@@ -31,8 +33,25 @@ export default function Dynatrace() {
   const { status, board, loading, error, refresh, reloadStatus } = useBoard(view, win)
 
   const demo = board?.demo ?? status?.demo ?? false
-  // A loaded board always wins over a transient "not configured" status probe.
-  const hasAccess = (Boolean(status?.configured) || demo || Boolean(board)) && !previewLanding && !previewReauth
+  // A configured tenant (or a loaded *non-demo* board) grants access. Demo mode
+  // no longer counts as access on its own — an unconfigured user should land on
+  // the setup wizard, not silently drop into the demo board. `exploreDemo` is an
+  // explicit opt-in from the landing page's "explore with demo data" link.
+  const hasAccess =
+    (Boolean(status?.configured) || Boolean(board && !demo) || exploreDemo) &&
+    !previewLanding &&
+    !previewReauth
+  // Session-expired signal: an auth error with no usable board.
+  const authExpired = Boolean(
+    error &&
+      !board &&
+      (error.code === 'auth_expired' ||
+        /sign-in|invalid_grant|invalidated/i.test((error.message || '') + (error.hint || ''))),
+  )
+  // The landing page is a full-screen takeover: hide the demo banner + toolbar
+  // chrome whenever it's showing.
+  const showLanding =
+    previewLanding || previewReauth || (!hasAccess && Boolean(status)) || authExpired
   const rank = board?.smart_rank
   const smartFresh = isProblemView(view) && isSmartFresh(rank)
 
@@ -58,6 +77,20 @@ export default function Dynatrace() {
   }, [view, sort, smartFresh, rank])
 
   const showBoard = hasAccess && (!error || board) && unfilteredTotal > 0 && filteredTotal > 0
+
+  // Landing / re-auth takeover — render the wizard alone, without board chrome.
+  if (showLanding) {
+    const reauthMode = previewReauth || (authExpired && !previewLanding)
+    return (
+      <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: T.bg, color: T.text, fontFamily: T.font }}>
+        {reauthMode ? (
+          <LandingPage reauth onConnected={() => void reloadStatus()} />
+        ) : (
+          <LandingPage onConnected={() => void reloadStatus()} onExploreDemo={() => setExploreDemo(true)} />
+        )}
+      </div>
+    )
+  }
 
   return (
     <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: T.bg, color: T.text, fontFamily: T.font }}>
@@ -100,15 +133,7 @@ export default function Dynatrace() {
       )}
 
       {/* Body */}
-      {previewLanding ? (
-        <LandingPage onConnected={() => void reloadStatus()} />
-      ) : previewReauth ? (
-        <LandingPage reauth onConnected={() => void reloadStatus()} />
-      ) : !hasAccess && status ? (
-        <LandingPage onConnected={() => void reloadStatus()} />
-      ) : error && !board && (error.code === 'auth_expired' || /sign-in|invalid_grant|invalidated/i.test((error.message || '') + (error.hint || ''))) ? (
-        <LandingPage reauth onConnected={() => void reloadStatus()} />
-      ) : error && !board ? (
+      {error && !board ? (
         <EmptyState
           icon="warning"
           title="Couldn't load the board"

@@ -245,6 +245,26 @@ def _token_env_path() -> Path:
     return _data_dir() / "token.env"
 
 
+def _disconnected_path() -> Path:
+    # App-scoped sign-out marker. When present, the app reports "not configured"
+    # (demo) regardless of dtctl's own contexts. Cleared on any sign-in.
+    return _data_dir() / "disconnected"
+
+
+def _set_disconnected() -> None:
+    try:
+        _disconnected_path().write_text("1", encoding="utf-8")
+    except OSError:
+        pass
+
+
+def _clear_disconnected() -> None:
+    try:
+        _disconnected_path().unlink()
+    except OSError:
+        pass
+
+
 def _write_secret(path: Path, value: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0)
@@ -340,6 +360,10 @@ async def resolve_credential(refresh: bool = False) -> Cred:
 
 
 async def _resolve_credential_uncached() -> Cred:
+    # 0. App-scoped sign-out marker -> unconfigured (demo), WITHOUT touching
+    # dtctl's own contexts. Any sign-in path clears this marker.
+    if _disconnected_path().is_file():
+        return Cred(False, "none", "", demo_data.DEMO_ENVIRONMENT, token=None)
     # 1. DT_ACCESS_TOKEN env (+ DT_ENVIRONMENT_URL)
     env_tok = os.environ.get("DT_ACCESS_TOKEN")
     env_url = os.environ.get("DT_ENVIRONMENT_URL", "")
@@ -979,6 +1003,7 @@ async def h_login(request: web.Request) -> web.Response:
     # Pin the fresh context and refresh credentials.
     _context_path().parent.mkdir(parents=True, exist_ok=True)
     _context_path().write_text(ctx_name, encoding="utf-8")
+    _clear_disconnected()
     _invalidate_cred_cache()
     dtctl.clear_cache()
     cred = await resolve_credential(refresh=True)
@@ -990,6 +1015,8 @@ async def h_login(request: web.Request) -> web.Response:
 async def h_put_context(request: web.Request) -> web.Response:
     body = await _read_json(request)
     name = (body.get("context") or "").strip()
+    # Selecting/using a tenant is a reconnect intent -> lift any sign-out marker.
+    _clear_disconnected()
     if name:
         # Validate the context exists and authenticates before pinning it.
         try:
@@ -1040,6 +1067,7 @@ async def h_put_token(request: web.Request) -> web.Response:
     _write_secret(_token_path(), token)
     if environment:
         _write_secret(_token_env_path(), environment)
+    _clear_disconnected()
     _invalidate_cred_cache()
     return web.json_response({
         "configured": True, "source": "token",
@@ -1059,9 +1087,27 @@ async def h_delete_token(request: web.Request) -> web.Response:
     return web.json_response({"configured": False})
 
 
-# =============================================================================
-# App wiring
-# =============================================================================
+@_handler
+async def h_disconnect(request: web.Request) -> web.Response:
+    """App-scoped sign out. Marks the app disconnected and clears the app's OWN
+    stored credentials (pinned context choice + pasted token). Deliberately does
+    NOT run `dtctl auth logout` and does NOT delete any dtctl context, so other
+    tools and tenants on this machine are unaffected. Signing back in (SSO,
+    token, or picking a tenant) clears the marker."""
+    _set_disconnected()
+    try:
+        _context_path().unlink()
+    except OSError:
+        pass
+    for p in (_token_path(), _token_env_path()):
+        try:
+            if p.is_file():
+                p.unlink()
+        except OSError:
+            pass
+    _invalidate_cred_cache()
+    dtctl.clear_cache()
+    return web.json_response({"configured": False})
 def make_app() -> web.Application:
     app = web.Application(middlewares=[hmac_proxy_middleware])
     app.router.add_get("/health", h_health)
@@ -1075,6 +1121,7 @@ def make_app() -> web.Application:
     app.router.add_post(f"{API}/settings/login", h_login)
     app.router.add_post(f"{API}/settings/token", h_put_token)
     app.router.add_delete(f"{API}/settings/token", h_delete_token)
+    app.router.add_post(f"{API}/settings/disconnect", h_disconnect)
     app.router.add_post(f"{API}/handoff", h_handoff)
     return app
 

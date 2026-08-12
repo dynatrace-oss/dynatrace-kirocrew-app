@@ -181,10 +181,14 @@ function MethodTab({
 export function LandingPage({
   onConnected,
   reauth = false,
+  onExploreDemo,
 }: {
   onConnected: () => void
   /** When true: session expired mode — skip Step 1, show a re-auth banner. */
   reauth?: boolean
+  /** When provided (first-run, non-reauth): renders a secondary link that lets
+   *  the user drop into the demo board without configuring credentials. */
+  onExploreDemo?: () => void
 }) {
   const [info, setInfo] = useState<SettingsInfo | null>(null)
   const [checkingDtctl, setCheckingDtctl] = useState(!reauth) // skip check if reauth
@@ -606,6 +610,25 @@ export function LandingPage({
           </a>
           {' '}— no credit card required.
         </div>
+      )}
+
+      {/* ── Secondary: explore demo without connecting ── */}
+      {!reauth && onExploreDemo && (
+        <button
+          onClick={onExploreDemo}
+          style={{
+            marginTop: 14,
+            background: 'none',
+            border: 'none',
+            color: T.muted,
+            fontSize: 12.5,
+            cursor: 'pointer',
+            textDecoration: 'underline',
+            textUnderlineOffset: 3,
+          }}
+        >
+          Just looking? Explore with demo data
+        </button>
       )}
     </div>
   )
