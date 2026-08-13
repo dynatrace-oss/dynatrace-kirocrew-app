@@ -30,7 +30,7 @@ export default function Dynatrace() {
   const previewLanding = previewParam === 'landing'
   const previewReauth = previewParam === 'reauth'
 
-  const { status, board, loading, error, refresh, reloadStatus } = useBoard(view, win)
+  const { status, board, loading, error, refresh, reload } = useBoard(view, win)
 
   const demo = board?.demo ?? status?.demo ?? false
   // A configured tenant (or a loaded *non-demo* board) grants access. Demo mode
@@ -84,9 +84,9 @@ export default function Dynatrace() {
     return (
       <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: T.bg, color: T.text, fontFamily: T.font }}>
         {reauthMode ? (
-          <LandingPage reauth onConnected={() => void reloadStatus()} />
+          <LandingPage reauth onConnected={() => void reload()} />
         ) : (
-          <LandingPage onConnected={() => void reloadStatus()} onExploreDemo={() => setExploreDemo(true)} />
+          <LandingPage onConnected={() => void reload()} onExploreDemo={() => setExploreDemo(true)} />
         )}
       </div>
     )
@@ -94,7 +94,7 @@ export default function Dynatrace() {
 
   return (
     <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: T.bg, color: T.text, fontFamily: T.font }}>
-      {demo && <DemoBanner onSettings={() => setSettingsOpen(true)} />}
+      {demo && <DemoBanner onLeaveDemo={() => setExploreDemo(false)} />}
 
       <PageHeader environment={status?.environment} demo={demo} />
 
@@ -176,7 +176,7 @@ export default function Dynatrace() {
         <SettingsOverlay
           status={status}
           onClose={() => setSettingsOpen(false)}
-          onChanged={() => void reloadStatus()}
+          onChanged={() => void reload()}
         />
       )}
     </div>
