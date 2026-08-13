@@ -150,12 +150,12 @@ export function SettingsOverlay({
     }
   }
 
-  const removeToken = async () => {
+  const signOut = async () => {
     setBusy('remove')
     setErr(null)
     try {
-      await api('/settings/token', { method: 'DELETE' })
-      setOk('Token removed.')
+      await api('/settings/disconnect', { method: 'POST' })
+      setOk('Signed out. This app is disconnected — your dtctl logins are untouched.')
       loadInfo()
       onChanged()
     } catch (e) {
@@ -275,13 +275,11 @@ export function SettingsOverlay({
                 <Chip tone="muted">{info?.source === 'token' || status?.source === 'token' || status?.source === 'app' ? 'access token' : status?.source === 'env' ? 'env vars' : 'Dynatrace sign-in'}</Chip>
               </div>
               <div style={{ fontSize: 12.5, color: T.muted, wordBreak: 'break-all' }}>{status?.environment}</div>
-              {(status?.source === 'app' || status?.source === 'token') && (
-                <div>
-                  <Button variant="danger" onClick={() => void removeToken()} disabled={busy !== ''}>
-                    {busy === 'remove' ? 'Removing…' : 'Remove token'}
-                  </Button>
-                </div>
-              )}
+              <div>
+                <Button variant="danger" onClick={() => void signOut()} disabled={busy !== ''}>
+                  {busy === 'remove' ? 'Signing out…' : 'Sign out'}
+                </Button>
+              </div>
             </Panel>
 
             {info && info.contexts.length > 1 && (

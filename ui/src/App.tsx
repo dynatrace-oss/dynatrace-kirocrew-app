@@ -8,6 +8,7 @@ import type { Selection } from './components/Board'
 import { Drawer } from './components/Drawer'
 import { SettingsOverlay } from './components/SettingsOverlay'
 import { EmptyState } from './components/EmptyState'
+import { LandingPage } from './components/LandingPage'
 import { useBoard } from './useBoard'
 import { isProblemView, isSmartFresh, matchesSearch, normalizeColumns } from './api'
 import type { SortKey, ViewKey, WindowKey } from './api'
@@ -20,12 +21,37 @@ export default function Dynatrace() {
   const [search, setSearch] = useState('')
   const [selection, setSelection] = useState<Selection | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  // Lets an unconfigured user opt into the demo board from the landing page.
+  const [exploreDemo, setExploreDemo] = useState(false)
 
-  const { status, board, loading, error, refresh, reloadStatus } = useBoard(view, win)
+  // Dev/test preview flag: ?preview=landing or ?preview=reauth forces those states
+  // regardless of credential status. Remove the param to return to normal.
+  const previewParam = new URLSearchParams(window.location.search).get('preview')
+  const previewLanding = previewParam === 'landing'
+  const previewReauth = previewParam === 'reauth'
+
+  const { status, board, loading, error, refresh, reload } = useBoard(view, win)
 
   const demo = board?.demo ?? status?.demo ?? false
-  // A loaded board always wins over a transient "not configured" status probe.
-  const hasAccess = Boolean(status?.configured) || demo || Boolean(board)
+  // A configured tenant (or a loaded *non-demo* board) grants access. Demo mode
+  // no longer counts as access on its own — an unconfigured user should land on
+  // the setup wizard, not silently drop into the demo board. `exploreDemo` is an
+  // explicit opt-in from the landing page's "explore with demo data" link.
+  const hasAccess =
+    (Boolean(status?.configured) || Boolean(board && !demo) || exploreDemo) &&
+    !previewLanding &&
+    !previewReauth
+  // Session-expired signal: an auth error with no usable board.
+  const authExpired = Boolean(
+    error &&
+      !board &&
+      (error.code === 'auth_expired' ||
+        /sign-in|invalid_grant|invalidated/i.test((error.message || '') + (error.hint || ''))),
+  )
+  // The landing page is a full-screen takeover: hide the demo banner + toolbar
+  // chrome whenever it's showing.
+  const showLanding =
+    previewLanding || previewReauth || (!hasAccess && Boolean(status)) || authExpired
   const rank = board?.smart_rank
   const smartFresh = isProblemView(view) && isSmartFresh(rank)
 
@@ -52,9 +78,23 @@ export default function Dynatrace() {
 
   const showBoard = hasAccess && (!error || board) && unfilteredTotal > 0 && filteredTotal > 0
 
+  // Landing / re-auth takeover — render the wizard alone, without board chrome.
+  if (showLanding) {
+    const reauthMode = previewReauth || (authExpired && !previewLanding)
+    return (
+      <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: T.bg, color: T.text, fontFamily: T.font }}>
+        {reauthMode ? (
+          <LandingPage reauth onConnected={() => void reload()} />
+        ) : (
+          <LandingPage onConnected={() => void reload()} onExploreDemo={() => setExploreDemo(true)} />
+        )}
+      </div>
+    )
+  }
+
   return (
     <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: T.bg, color: T.text, fontFamily: T.font }}>
-      {demo && <DemoBanner onSettings={() => setSettingsOpen(true)} />}
+      {demo && <DemoBanner onLeaveDemo={() => setExploreDemo(false)} />}
 
       <PageHeader environment={status?.environment} demo={demo} />
 
@@ -93,21 +133,7 @@ export default function Dynatrace() {
       )}
 
       {/* Body */}
-      {!hasAccess && status ? (
-        <EmptyState
-          icon="settings"
-          title="Connect Dynatrace"
-          body="No Dynatrace credentials are configured. Add an access token in Settings to load your tenant."
-          action={{ label: 'Open Settings', onClick: () => setSettingsOpen(true) }}
-        />
-      ) : error && !board && (error.code === 'auth_expired' || /sign-in|invalid_grant|invalidated/i.test((error.message || '') + (error.hint || ''))) ? (
-        <EmptyState
-          icon="warning"
-          title="Dynatrace sign-in expired"
-          body="Your sign-in was invalidated and needs a quick renewal — open Settings and click 'Sign in with Dynatrace' to reconnect in the browser."
-          action={{ label: 'Open Settings', onClick: () => setSettingsOpen(true) }}
-        />
-      ) : error && !board ? (
+      {error && !board ? (
         <EmptyState
           icon="warning"
           title="Couldn't load the board"
@@ -150,7 +176,7 @@ export default function Dynatrace() {
         <SettingsOverlay
           status={status}
           onClose={() => setSettingsOpen(false)}
-          onChanged={() => void reloadStatus()}
+          onChanged={() => void reload()}
         />
       )}
     </div>

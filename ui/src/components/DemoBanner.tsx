@@ -1,7 +1,7 @@
 import { T } from '../theme'
 import { Icon } from './Icon'
 
-export function DemoBanner({ onSettings }: { onSettings: () => void }) {
+export function DemoBanner({ onLeaveDemo }: { onLeaveDemo: () => void }) {
   return (
     <div
       style={{
@@ -18,10 +18,10 @@ export function DemoBanner({ onSettings }: { onSettings: () => void }) {
     >
       <Icon name="warning" size={15} />
       <span style={{ flex: 1, fontWeight: 500 }}>
-        Demo data — add a Dynatrace token to see your own tenant. Nothing to install.
+        Demo data. To connect to your own Dynatrace tenant, leave demo mode.
       </span>
       <button
-        onClick={onSettings}
+        onClick={onLeaveDemo}
         style={{
           padding: '4px 10px',
           fontSize: 12,
@@ -34,7 +34,7 @@ export function DemoBanner({ onSettings }: { onSettings: () => void }) {
           whiteSpace: 'nowrap',
         }}
       >
-        Connect Dynatrace
+        Leave demo mode
       </button>
     </div>
   )

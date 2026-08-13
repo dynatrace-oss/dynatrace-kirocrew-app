@@ -11,6 +11,7 @@ export interface UseBoard {
   error: ApiError | null
   refresh: () => Promise<void>
   reloadStatus: () => Promise<void>
+  reload: () => Promise<void>
 }
 
 /**
@@ -92,5 +93,15 @@ export function useBoard(view: ViewKey, win: WindowKey): UseBoard {
     await Promise.all([loadBoard(viewRef.current, winRef.current, true), loadStatus()])
   }, [loadBoard, loadStatus])
 
-  return { status, board, loading, error, refresh, reloadStatus: loadStatus }
+  // Hard reload after a credential change (sign-in / sign-out). Blanks the board
+  // first so a stale demo board can never flash under the real one, then
+  // refetches board + status fresh (cache-busted) with the new credential.
+  const reload = useCallback(async () => {
+    setBoard(null)
+    setError(null)
+    setLoading(true)
+    await Promise.all([loadBoard(viewRef.current, winRef.current, true), loadStatus()])
+  }, [loadBoard, loadStatus])
+
+  return { status, board, loading, error, refresh, reloadStatus: loadStatus, reload }
 }
