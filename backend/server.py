@@ -1015,10 +1015,11 @@ async def h_login(request: web.Request) -> web.Response:
 async def h_put_context(request: web.Request) -> web.Response:
     body = await _read_json(request)
     name = (body.get("context") or "").strip()
-    # Selecting/using a tenant is a reconnect intent -> lift any sign-out marker.
-    _clear_disconnected()
     if name:
         # Validate the context exists and authenticates before pinning it.
+        # Only a SUCCESSFUL selection lifts the sign-out marker - clearing it
+        # before validation would silently sign the user back into the dtctl
+        # active context when their chosen context fails validation.
         try:
             await dtctl.whoami(context=name)
         except DtctlError as e:
@@ -1028,11 +1029,14 @@ async def h_put_context(request: web.Request) -> web.Response:
                              code, hint=e.message[:300])
         _context_path().parent.mkdir(parents=True, exist_ok=True)
         _context_path().write_text(name, encoding="utf-8")
+        _clear_disconnected()
     else:
+        # Explicit "use dtctl active context" is also a reconnect intent.
         try:
             _context_path().unlink()
         except OSError:
             pass
+        _clear_disconnected()
     _invalidate_cred_cache()
     dtctl.clear_cache()
     cred = await resolve_credential(refresh=True)
