@@ -1,2 +1,11 @@
-* @dynatrace/<team-name>
-* @DRI 
+# Default owners
+* @michaelstephan @enl1104
+
+# GitHub configuration
+/.github/ @michaelstephan @enl1104
+
+# Documentation
+/docs/ @michaelstephan @enl1104
+
+# Security
+/SECURITY.md @michaelstephan @enl1104
