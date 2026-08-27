@@ -9,11 +9,6 @@ The app is **read-only**: it never closes problems or changes any Dynatrace
 state. Anything that acts links out to Dynatrace or hands a composed prompt to
 a KiroCrew agent.
 
-## Demo
-
-▶️ [docs/demo.mp4](docs/demo.mp4) — the board running against a live tenant,
-with agent-ranked problems, health-grouped services, and the detail drawer.
-
 ## Smart ranking
 
 The default sort is **Smart**: a KiroCrew agent (the `dynatrace-smart-rank`
