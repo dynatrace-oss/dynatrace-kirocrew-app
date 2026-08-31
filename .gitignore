@@ -1,6 +1,8 @@
 node_modules/
 ui/node_modules/
-ui/dist/
+# ui/dist/ is intentionally committed: KiroCrew installs from a plain git
+# clone (no build step), so the built bundle must be in the repo. Rebuild it
+# with `cd ui && npm run build` whenever ui/src changes. See issue #4.
 *.log
 .DS_Store
 data/

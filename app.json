@@ -13,6 +13,18 @@
     "dynatrace",
     "kanban"
   ],
+  "iconPath": "ui/public/dynatrace.png",
+  "heroImage": "docs/screenshot-live-board.png",
+  "screenshots": [
+    "docs/screenshot-live-board.png",
+    "docs/screenshot-fixed-board.png"
+  ],
+  "highlights": [
+    "Kanban control tower for Dynatrace problems, services, and applications",
+    "Agentic smart ranking triages active problems best-first",
+    "Read-only and safe: powered by dtctl, never mutates Dynatrace state",
+    "Works instantly in demo mode with no credentials required"
+  ],
   "backend": {
     "entryPoint": "backend/server.py",
     "port": "auto",
@@ -35,7 +47,7 @@
       "every": 900,
       "persistent_session": false,
       "silent": true,
-      "message": "Smart-rank the Dynatrace app Kanban board. Steps: (1) Get the board. Preferred: obtain the gateway base URL and auth query param via the token subcommand of the kirocrew CLI, then GET {base}/apps/dynatrace/api/board?view=problems&window=7d. If that CLI command is blocked by security policy, use the direct backend instead: GET http://127.0.0.1:9100/api/board?view=problems&window=7d (no auth needed). (2) If the response has demo:true, or the columns new/ongoing/maintenance contain zero cards in total, finish silently - do not write a ranking and do not notify anyone. (3) Otherwise rank ONLY the cards from the new, ongoing, and maintenance columns, best-first, by triage urgency. Use your judgment: category weight (AVAILABILITY > ERROR > RESOURCE_CONTENTION > SLOWDOWN), blast radius (affected_count), whether a root cause is identified, problem age, recurrence (same title reappearing), and anything you know from memory about this user's environment and priorities. (4) POST the ranking to the same base you read from (/apps/dynatrace/api/rank via gateway, or http://127.0.0.1:9100/api/rank direct) with JSON body {\"view\":\"problems\",\"order\":[<display_id best-first>...],\"rationales\":{<display_id>:\"<one short sentence why this position>\"}}. (5) Complete silently: no user notification, no Slack, minimal output."
+      "message": "Smart-rank the Dynatrace app Kanban board. Steps: (1) Find the backend port: read the JSON file at ${KIROCREW_HOME:-~/.kiro/crew}/apps/dynatrace/data/backend.json and take its \"port\" field. If the file is missing or unreadable, finish silently (the backend isn't running). (2) Get the board: GET http://127.0.0.1:{port}/api/board?view=problems&window=7d (local backend, no auth needed). (3) If the response has demo:true, or the columns new/ongoing/maintenance contain zero cards in total, finish silently - do not write a ranking and do not notify anyone. (4) Otherwise rank ONLY the cards from the new, ongoing, and maintenance columns, best-first, by triage urgency. Use your judgment: category weight (AVAILABILITY > ERROR > RESOURCE_CONTENTION > SLOWDOWN), blast radius (affected_count), whether a root cause is identified, problem age, recurrence (same title reappearing), and anything you know from memory about this user's environment and priorities. (5) POST the ranking to http://127.0.0.1:{port}/api/rank with JSON body {\"view\":\"problems\",\"order\":[<display_id best-first>...],\"rationales\":{<display_id>:\"<one short sentence why this position>\"}}. (6) Complete silently: no user notification, no Slack, minimal output."
     }
   ]
 }
