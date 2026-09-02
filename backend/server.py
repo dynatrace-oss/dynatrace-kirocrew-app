@@ -1130,7 +1130,25 @@ def make_app() -> web.Application:
     return app
 
 
+def _backend_state_path() -> Path:
+    # Well-known file the smart-rank cron reads to discover the actual bound
+    # port (manifest declares port:"auto", so the gateway assigns it via $PORT
+    # at spawn — 9100 is only a dev default). See issue #5.
+    return _data_dir() / "backend.json"
+
+
+def _write_backend_state(port: int) -> None:
+    try:
+        _backend_state_path().write_text(
+            json.dumps({"port": port, "startedAt": _now().isoformat()}),
+            encoding="utf-8",
+        )
+    except OSError:
+        log.warning("could not write backend state file", exc_info=True)
+
+
 if __name__ == "__main__":
+    _write_backend_state(PORT)
     log.info("%s backend on 127.0.0.1:%s (proxy HMAC %s)", APP_NAME, PORT,
              "ENFORCED" if os.environ.get("KIROCREW_PROXY_SECRET", "").strip() else "SOFT/dev")
     web.run_app(make_app(), host="127.0.0.1", port=PORT, print=None)
