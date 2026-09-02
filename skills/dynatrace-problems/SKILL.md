@@ -36,6 +36,8 @@ configured) — never present it to the user as real production state.
 Reach the board via the **local backend directly** (no auth needed): read the
 port from `${KIROCREW_HOME:-~/.kiro/crew}/apps/dynatrace/data/backend.json`
 (the `port` field, written at startup) and use `http://127.0.0.1:{port}/api/…`.
+If the file is missing or a request fails to connect, finish silently — the
+backend isn't running or the recorded port is stale.
 Do **not** try to obtain a gateway token via the kirocrew CLI — that command is
 blocked by the default security policy and every attempt lands in the user's
 security event log.
