@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useChatLauncher } from '@kirocrew/app-sdk'
-import { SCRIM, T } from '../theme'
+import { T } from '../theme'
 import { Button, Chip, Tag } from './primitives'
 import { Icon } from './Icon'
 import { api, affectedCount, categoryTone, durationMs, rootCauseText } from '../api'
@@ -63,24 +63,24 @@ function DeepLink({ href }: { href: string }) {
       rel="noreferrer"
       style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: T.accent, textDecoration: 'none' }}
     >
-      Open in Dynatrace
-      <Icon name="external" size={13} />
-    </a>
-  )
+    Open in Dynatrace
+    <Icon name="external" size={13} />
+  </a>
+)
 }
 
 function RelatedList({ items }: { items: RelatedProblem[] }) {
-  if (!items.length) return <span style={{ color: T.muted }}>None</span>
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      {items.map((p) => (
-        <div key={p.display_id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {p.category && <Chip tone={categoryTone(p.category)}>{p.category}</Chip>}
-          <span style={{ fontSize: 12.5 }}>{p.name || p.title || p.display_id}</span>
-          <span style={{ flex: 1 }} />
-          <span style={{ fontFamily: T.mono, fontSize: 10.5, color: T.muted }}>{p.display_id}</span>
-        </div>
-      ))}
+if (!items.length) return <span style={{ color: T.muted }}>None</span>
+return (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+    {items.map((p) => (
+      <div key={p.display_id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {p.category && <Chip tone={categoryTone(p.category)}>{p.category}</Chip>}
+        <span style={{ fontSize: 12.5 }}>{p.name || p.title || p.display_id}</span>
+        <span style={{ flex: 1 }} />
+        <span style={{ fontFamily: T.mono, fontSize: 10.5, color: T.muted }}>{p.display_id}</span>
+      </div>
+    ))}
     </div>
   )
 }
@@ -361,25 +361,28 @@ export function Drawer({ selection, envUrl, onClose }: { selection: Selection; e
       ? problem?.name || problem?.title || (card as ProblemCardT | undefined)?.name || (card as ProblemCardT | undefined)?.title || selection.id
       : entity?.name || (card as EntityCardT | undefined)?.name || selection.id
 
+  // Non-modal side panel: the board stays visible and interactive, so the
+  // user can click through problems/services one by one — each click swaps
+  // the panel content (selection is owned by App) instead of requiring a
+  // dismiss-reopen round trip. Esc and the close button still dismiss.
   return (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 20 }}>
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: SCRIM }} />
-      <div
-        role="dialog"
-        aria-modal="true"
-        style={{
-          position: 'absolute',
-          top: 0,
-          right: 0,
-          bottom: 0,
-          width: 'min(460px, 92%)',
-          display: 'flex',
-          flexDirection: 'column',
-          background: T.panel,
-          borderLeft: `1px solid ${T.border}`,
-          boxShadow: T.shadowLg,
-        }}
-      >
+    <div
+      role="complementary"
+      aria-label={heading}
+      style={{
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 20,
+        width: 'min(460px, 92%)',
+        display: 'flex',
+        flexDirection: 'column',
+        background: T.panel,
+        borderLeft: `1px solid ${T.border}`,
+        boxShadow: T.shadowLg,
+      }}
+    >
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '14px 16px', borderBottom: `1px solid ${T.border}` }}>
           <div style={{ flex: 1, fontSize: 15, fontWeight: 700, color: T.textStrong, lineHeight: 1.3 }}>{heading}</div>
           <Button variant="ghost" onClick={onClose} title="Close (Esc)" style={{ padding: 6 }}>
@@ -411,7 +414,6 @@ export function Drawer({ selection, envUrl, onClose }: { selection: Selection; e
           {!loading && !error && problem && <ProblemBody detail={problem} envUrl={envUrl} />}
           {!loading && !error && entity && <EntityBody detail={entity} envUrl={envUrl} />}
         </div>
-      </div>
     </div>
   )
 }
