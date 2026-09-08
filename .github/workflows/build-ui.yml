@@ -1,0 +1,54 @@
+name: Build UI bundle
+
+# KiroCrew installs this app from a plain git clone with no build step, so the
+# built ui/dist/ bundle must be committed and kept in sync with ui/src/. This
+# workflow rebuilds the bundle whenever UI source changes and commits the
+# result back to main. The paths filter deliberately excludes ui/dist/ so the
+# bot's rebuild commit does not retrigger this workflow. See issue #4.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'ui/src/**'
+      - 'ui/public/**'
+      - 'ui/package.json'
+      - 'ui/package-lock.json'
+      - 'ui/vite.config.ts'
+      - 'ui/tsconfig.json'
+
+permissions:
+  contents: write
+
+jobs:
+  build-ui:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: ui
+        run: npm ci
+
+      - name: Build UI bundle
+        working-directory: ui
+        run: npm run build
+
+      - name: Commit rebuilt bundle if changed
+        run: |
+          if [ -n "$(git status --porcelain ui/dist)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add ui/dist
+            git commit -m "chore(ui): rebuild dist bundle [skip ci]"
+            git push
+          else
+            echo "ui/dist is already up to date"
+          fi
