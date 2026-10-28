@@ -41,6 +41,9 @@
       }
     ]
   },
+  "permissions": {
+    "cron": true
+  },
   "crons": [
     {
       "name": "dynatrace-smart-rank",
